@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+
+    <!--
+        Configuración para desarrollo local.
+
+        SmartTable todavía utiliza HTTP local durante
+        el desarrollo con Android Studio.
+
+        En producción utilizaremos HTTPS y eliminaremos
+        esta excepción.
+    -->
+    <base-config
+        cleartextTrafficPermitted="true" />
+
+</network-security-config>
