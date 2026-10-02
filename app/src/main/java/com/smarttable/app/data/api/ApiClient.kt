@@ -26,8 +26,7 @@ object ApiClient {
      * mediante 127.0.0.1.
      */
     private const val BASE_URL =
-        "http://127.0.0.1:4000/api/"
-
+        "https://smart-table-backend-production.up.railway.app/api/"
 
     lateinit var api: SmartTableApi
         private set

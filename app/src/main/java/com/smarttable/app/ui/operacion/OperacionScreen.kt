@@ -3,7 +3,7 @@ package com.smarttable.app.ui.operacion
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -18,13 +18,12 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -32,8 +31,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -53,15 +50,12 @@ import androidx.compose.runtime.setValue
 
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
-
 import androidx.compose.ui.text.font.FontWeight
-
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
 import androidx.compose.ui.window.Dialog
 
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -75,27 +69,61 @@ import com.smarttable.app.data.model.Usuario
 import com.smarttable.app.ui.nfc.VinculacionNfcDialog
 
 
+private val FondoApp =
+    Color(
+        0xFFF4F7F9
+    )
+
+
+private val FondoTarjeta =
+    Color.White
+
+
+private val NegroPrincipal =
+    Color(
+        0xFF111827
+    )
+
+
+private val GrisTexto =
+    Color(
+        0xFF64748B
+    )
+
+
+private val GrisSuave =
+    Color(
+        0xFFF1F5F9
+    )
+
+
 private val VerdeSmartTable =
     Color(
         0xFF059669
     )
 
 
-private val Fondo =
+private val VerdeSuave =
     Color(
-        0xFFF8FAFC
+        0xFFECFDF5
     )
 
 
-private val TextoPrincipal =
+private val RojoMesa =
     Color(
-        0xFF0F172A
+        0xFFEF4444
     )
 
 
-private val TextoSecundario =
+private val AmarilloMesa =
     Color(
-        0xFF64748B
+        0xFFF59E0B
+    )
+
+
+private val NaranjaMesa =
+    Color(
+        0xFFF97316
     )
 
 
@@ -118,14 +146,6 @@ fun OperacionScreen(
         }
 
 
-    /*
-     * Mesa seleccionada exclusivamente para
-     * programar o reemplazar su etiqueta NFC.
-     *
-     * La mantenemos separada de mesaSeleccionadaId
-     * porque la vinculación NFC es una operación
-     * administrativa distinta de la operación diaria.
-     */
     var mesaParaVincularNfc by
     remember {
         mutableStateOf<Mesa?>(
@@ -223,34 +243,26 @@ fun OperacionScreen(
                 Modifier
                     .fillMaxSize()
                     .background(
-                        Fondo
+                        FondoApp
                     )
                     .padding(
                         padding
                     )
-                    .padding(
-                        horizontal =
-                            16.dp,
-
-                        vertical =
-                            14.dp
-                    )
         ) {
 
+            /*
+             * =====================================================
+             * CABECERA
+             * =====================================================
+             */
+
             EncabezadoOperacion(
+
                 usuario =
                     usuario,
 
                 onCerrarSesion =
                     onCerrarSesion
-            )
-
-
-            Spacer(
-                modifier =
-                    Modifier.height(
-                        18.dp
-                    )
             )
 
 
@@ -278,267 +290,388 @@ fun OperacionScreen(
             }
 
 
-            if (
-                estado.pisos.isEmpty()
-            ) {
-
-                EstadoVacio(
-
-                    titulo =
-                        "No existen pisos configurados",
-
-                    descripcion =
-                        "Configura las zonas del restaurante desde SmartTable Web.",
-
-                    onReintentar = {
-
-                        viewModel
-                            .cargarOperacion()
-                    }
-                )
-
-
-                return@Column
-            }
-
-
-            SelectorPiso(
-
-                pisos =
-                    estado.pisos,
-
-                pisoSeleccionadoId =
-                    estado.pisoSeleccionadoId,
-
-                onSeleccionar = {
-
-                    viewModel
-                        .seleccionarPiso(
-                            it
-                        )
-                }
-            )
-
-
-            Spacer(
-                modifier =
-                    Modifier.height(
-                        12.dp
-                    )
-            )
-
-
-            LeyendaEstados()
-
-
-            Spacer(
-                modifier =
-                    Modifier.height(
-                        12.dp
-                    )
-            )
-
-
-            /*
-             * El NFC se muestra como flujo principal.
-             *
-             * El mapa continúa disponible como
-             * alternativa manual y contingencia.
-             */
-            NfcStatusCard()
-
-
-            if (
-                estado.resolviendoNfc
-            ) {
-
-                Spacer(
-                    modifier =
-                        Modifier.height(
-                            8.dp
-                        )
-                )
-
-
-                Surface(
-
-                    modifier =
-                        Modifier.fillMaxWidth(),
-
-                    shape =
-                        RoundedCornerShape(
-                            14.dp
-                        ),
-
-                    color =
-                        Color(
-                            0xFFECFDF5
-                        )
-                ) {
-
-                    Row(
-
-                        modifier =
-                            Modifier.padding(
-                                12.dp
-                            ),
-
-                        verticalAlignment =
-                            Alignment.CenterVertically
-                    ) {
-
-                        CircularProgressIndicator(
-
-                            modifier =
-                                Modifier.size(
-                                    20.dp
-                                ),
-
-                            color =
-                                VerdeSmartTable,
-
-                            strokeWidth =
-                                2.dp
-                        )
-
-
-                        Spacer(
-                            modifier =
-                                Modifier.width(
-                                    10.dp
-                                )
-                        )
-
-
-                        Text(
-
-                            text =
-                                "Identificando mesa NFC...",
-
-                            color =
-                                Color(
-                                    0xFF047857
-                                ),
-
-                            fontWeight =
-                                FontWeight.SemiBold,
-
-                            fontSize =
-                                12.sp
-                        )
-                    }
-                }
-            }
-
-
-            Spacer(
-                modifier =
-                    Modifier.height(
-                        12.dp
-                    )
-            )
-
-
-            Card(
+            LazyColumn(
 
                 modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .weight(
-                            1f
-                        ),
+                    Modifier.fillMaxSize(),
 
-                colors =
-                    CardDefaults.cardColors(
-                        containerColor =
-                            Color.White
+                contentPadding =
+                    androidx.compose.foundation.layout.PaddingValues(
+
+                        start =
+                            16.dp,
+
+                        end =
+                            16.dp,
+
+                        top =
+                            16.dp,
+
+                        bottom =
+                            28.dp
                     ),
 
-                shape =
-                    RoundedCornerShape(
-                        20.dp
+                verticalArrangement =
+                    Arrangement.spacedBy(
+                        14.dp
                     )
             ) {
 
-                if (
-                    mesasPiso.isEmpty()
-                ) {
+                /*
+                 * =================================================
+                 * RESUMEN OPERATIVO
+                 * =================================================
+                 */
 
-                    Box(
+                item {
 
-                        modifier =
-                            Modifier.fillMaxSize(),
-
-                        contentAlignment =
-                            Alignment.Center
-                    ) {
-
-                        Text(
-
-                            text =
-                                "No hay mesas en esta zona.",
-
-                            color =
-                                TextoSecundario
-                        )
-                    }
-
-                } else {
-
-                    PlanoMesas(
-
+                    ResumenOperacion(
                         mesas =
-                            mesasPiso,
-
-                        mesaSeleccionadaId =
-                            estado.mesaSeleccionadaId,
-
-                        onMesaSeleccionada = {
-
-                            viewModel
-                                .seleccionarMesa(
-
-                                    mesa =
-                                        it,
-
-                                    rolUsuario =
-                                        usuario.rol
-                                )
-                        }
+                            estado.mesas
                     )
                 }
-            }
 
 
-            Spacer(
-                modifier =
-                    Modifier.height(
-                        10.dp
+                /*
+                 * =================================================
+                 * NFC
+                 * =================================================
+                 */
+
+                item {
+
+                    TarjetaNfcPrincipal(
+                        resolviendo =
+                            estado.resolviendoNfc
                     )
-            )
+                }
 
 
-            Text(
+                /*
+                 * =================================================
+                 * PISOS
+                 * =================================================
+                 */
 
-                text =
-                    "También puedes tocar una mesa manualmente si no puedes utilizar NFC.",
+                item {
 
-                modifier =
-                    Modifier.fillMaxWidth(),
+                    if (
+                        estado.pisos.isEmpty()
+                    ) {
 
-                color =
-                    TextoSecundario,
+                        EstadoVacio(
 
-                fontSize =
-                    11.sp
-            )
+                            titulo =
+                                "No existen pisos configurados",
+
+                            descripcion =
+                                "Configura las zonas del restaurante desde SmartTable Web.",
+
+                            onReintentar = {
+
+                                viewModel
+                                    .cargarOperacion()
+                            }
+                        )
+
+                    } else {
+
+                        SelectorPisos(
+
+                            pisos =
+                                estado.pisos,
+
+                            pisoSeleccionadoId =
+                                estado.pisoSeleccionadoId,
+
+                            onSeleccionar = {
+
+                                viewModel
+                                    .seleccionarPiso(
+                                        it
+                                    )
+                            }
+                        )
+                    }
+                }
+
+
+                /*
+                 * =================================================
+                 * MAPA
+                 * =================================================
+                 */
+
+                if (
+                    estado.pisos.isNotEmpty()
+                ) {
+
+                    item {
+
+                        val pisoActual =
+                            estado.pisos
+                                .firstOrNull {
+
+                                    it.id ==
+                                            estado.pisoSeleccionadoId
+                                }
+
+
+                        Card(
+
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(
+                                        440.dp
+                                    ),
+
+                            shape =
+                                RoundedCornerShape(
+                                    24.dp
+                                ),
+
+                            colors =
+                                CardDefaults.cardColors(
+
+                                    containerColor =
+                                        FondoTarjeta
+                                ),
+
+                            elevation =
+                                CardDefaults.cardElevation(
+
+                                    defaultElevation =
+                                        2.dp
+                                )
+                        ) {
+
+                            Column(
+
+                                modifier =
+                                    Modifier
+                                        .fillMaxSize()
+                                        .padding(
+                                            16.dp
+                                        )
+                            ) {
+
+                                Row(
+
+                                    modifier =
+                                        Modifier.fillMaxWidth(),
+
+                                    verticalAlignment =
+                                        Alignment.CenterVertically
+                                ) {
+
+                                    Column(
+
+                                        modifier =
+                                            Modifier.weight(
+                                                1f
+                                            )
+                                    ) {
+
+                                        Text(
+
+                                            text =
+                                                pisoActual
+                                                    ?.nombre
+                                                    ?: "Mesas",
+
+                                            color =
+                                                NegroPrincipal,
+
+                                            fontSize =
+                                                18.sp,
+
+                                            fontWeight =
+                                                FontWeight.Bold
+                                        )
+
+
+                                        Text(
+
+                                            text =
+                                                "${mesasPiso.size} mesas en esta zona",
+
+                                            color =
+                                                GrisTexto,
+
+                                            fontSize =
+                                                11.sp
+                                        )
+                                    }
+
+
+                                    Surface(
+
+                                        shape =
+                                            RoundedCornerShape(
+                                                50.dp
+                                            ),
+
+                                        color =
+                                            GrisSuave
+                                    ) {
+
+                                        Text(
+
+                                            text =
+                                                "Modo manual",
+
+                                            modifier =
+                                                Modifier.padding(
+
+                                                    horizontal =
+                                                        10.dp,
+
+                                                    vertical =
+                                                        6.dp
+                                                ),
+
+                                            color =
+                                                GrisTexto,
+
+                                            fontSize =
+                                                10.sp,
+
+                                            fontWeight =
+                                                FontWeight.SemiBold
+                                        )
+                                    }
+                                }
+
+
+                                Spacer(
+
+                                    modifier =
+                                        Modifier.height(
+                                            12.dp
+                                        )
+                                )
+
+
+                                LeyendaEstados()
+
+
+                                Spacer(
+
+                                    modifier =
+                                        Modifier.height(
+                                            14.dp
+                                        )
+                                )
+
+
+                                Box(
+
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .weight(
+                                                1f
+                                            )
+                                            .background(
+
+                                                color =
+                                                    Color(
+                                                        0xFFF8FAFC
+                                                    ),
+
+                                                shape =
+                                                    RoundedCornerShape(
+                                                        18.dp
+                                                    )
+                                            )
+                                ) {
+
+                                    if (
+                                        mesasPiso.isEmpty()
+                                    ) {
+
+                                        Box(
+
+                                            modifier =
+                                                Modifier.fillMaxSize(),
+
+                                            contentAlignment =
+                                                Alignment.Center
+                                        ) {
+
+                                            Text(
+
+                                                text =
+                                                    "No hay mesas en esta zona.",
+
+                                                color =
+                                                    GrisTexto
+                                            )
+                                        }
+
+                                    } else {
+
+                                        PlanoMesas(
+
+                                            mesas =
+                                                mesasPiso,
+
+                                            mesaSeleccionadaId =
+                                                estado.mesaSeleccionadaId,
+
+                                            onMesaSeleccionada = {
+
+                                                viewModel
+                                                    .seleccionarMesa(
+
+                                                        mesa =
+                                                            it,
+
+                                                        rolUsuario =
+                                                            usuario.rol
+                                                    )
+                                            }
+                                        )
+                                    }
+                                }
+
+
+                                Spacer(
+
+                                    modifier =
+                                        Modifier.height(
+                                            10.dp
+                                        )
+                                )
+
+
+                                Text(
+
+                                    text =
+                                        "El mapa funciona como respaldo. Para una operación más rápida, acerca el teléfono al NFC de la mesa.",
+
+                                    color =
+                                        GrisTexto,
+
+                                    fontSize =
+                                        10.sp,
+
+                                    lineHeight =
+                                        14.sp
+                                )
+                            }
+                        }
+                    }
+                }
+            }
         }
 
 
         /*
-         * =====================================================
-         * OPERACIÓN DE MESA
-         * =====================================================
+         * =========================================================
+         * DETALLE OPERATIVO
+         * =========================================================
          */
 
         if (
@@ -574,11 +707,6 @@ fun OperacionScreen(
 
                 onVincularNfc = {
 
-                    /*
-                     * Cerramos el diálogo operacional
-                     * antes de abrir el administrativo
-                     * para no apilar dos diálogos.
-                     */
                     mesaParaVincularNfc =
                         mesaSeleccionada
 
@@ -631,9 +759,9 @@ fun OperacionScreen(
 
 
         /*
-         * =====================================================
-         * VINCULACIÓN DE ETIQUETA NFC
-         * =====================================================
+         * =========================================================
+         * ADMINISTRACIÓN NFC
+         * =========================================================
          */
 
         val mesaNfc =
@@ -667,118 +795,84 @@ private fun EncabezadoOperacion(
     onCerrarSesion: () -> Unit
 ) {
 
-    Row(
+    Surface(
 
         modifier =
             Modifier.fillMaxWidth(),
 
-        verticalAlignment =
-            Alignment.CenterVertically
+        color =
+            Color.White,
+
+        shadowElevation =
+            3.dp
     ) {
 
-        Column(
+        Row(
 
             modifier =
-                Modifier.weight(
-                    1f
-                )
+                Modifier
+                    .fillMaxWidth()
+                    .padding(
+
+                        horizontal =
+                            18.dp,
+
+                        vertical =
+                            16.dp
+                    ),
+
+            verticalAlignment =
+                Alignment.CenterVertically
         ) {
 
-            Text(
+            Surface(
 
-                text =
-                    "SmartTable",
+                modifier =
+                    Modifier.size(
+                        45.dp
+                    ),
 
-                color =
-                    TextoPrincipal,
-
-                fontSize =
-                    25.sp,
-
-                fontWeight =
-                    FontWeight.Bold
-            )
-
-
-            Text(
-
-                text =
-                    "${usuario.nombre} · ${
-                        obtenerNombreRol(
-                            usuario.rol
-                        )
-                    }",
+                shape =
+                    RoundedCornerShape(
+                        14.dp
+                    ),
 
                 color =
-                    TextoSecundario,
+                    NegroPrincipal
+            ) {
 
-                fontSize =
-                    12.sp
-            )
-        }
+                Box(
+
+                    contentAlignment =
+                        Alignment.Center
+                ) {
+
+                    Text(
+
+                        text =
+                            "ST",
+
+                        color =
+                            Color.White,
+
+                        fontWeight =
+                            FontWeight.ExtraBold,
+
+                        fontSize =
+                            15.sp
+                    )
+                }
+            }
 
 
-        TextButton(
-            onClick =
-                onCerrarSesion
-        ) {
+            Spacer(
 
-            Text(
-
-                text =
-                    "Salir",
-
-                color =
-                    Color(
-                        0xFFDC2626
+                modifier =
+                    Modifier.width(
+                        12.dp
                     )
             )
-        }
-    }
-}
 
-
-@Composable
-private fun SelectorPiso(
-    pisos: List<Piso>,
-    pisoSeleccionadoId: Int?,
-    onSeleccionar: (Int) -> Unit
-) {
-
-    var abierto by
-    remember {
-        mutableStateOf(
-            false
-        )
-    }
-
-
-    val pisoActual =
-        pisos.firstOrNull {
-
-            it.id ==
-                    pisoSeleccionadoId
-        }
-
-
-    Box {
-
-        OutlinedButton(
-
-            onClick = {
-
-                abierto =
-                    true
-            },
-
-            modifier =
-                Modifier.fillMaxWidth(),
-
-            shape =
-                RoundedCornerShape(
-                    14.dp
-                )
-        ) {
 
             Column(
 
@@ -791,79 +885,701 @@ private fun SelectorPiso(
                 Text(
 
                     text =
-                        "Zona",
-
-                    fontSize =
-                        10.sp,
+                        "SmartTable",
 
                     color =
-                        TextoSecundario
+                        NegroPrincipal,
+
+                    fontSize =
+                        20.sp,
+
+                    fontWeight =
+                        FontWeight.Bold
                 )
 
 
                 Text(
 
                     text =
-                        pisoActual
-                            ?.nombre
-                            ?: "Seleccionar",
-
-                    fontWeight =
-                        FontWeight.SemiBold,
+                        "${usuario.nombre} · ${
+                            obtenerNombreRol(
+                                usuario.rol
+                            )
+                        }",
 
                     color =
-                        TextoPrincipal
+                        GrisTexto,
+
+                    fontSize =
+                        11.sp
                 )
             }
+
+
+            TextButton(
+
+                onClick =
+                    onCerrarSesion
+            ) {
+
+                Text(
+
+                    text =
+                        "Salir",
+
+                    color =
+                        Color(
+                            0xFFDC2626
+                        ),
+
+                    fontSize =
+                        12.sp,
+
+                    fontWeight =
+                        FontWeight.SemiBold
+                )
+            }
+        }
+    }
+}
+
+
+@Composable
+private fun ResumenOperacion(
+    mesas: List<Mesa>
+) {
+
+    val disponibles =
+        mesas.count {
+
+            it.estado ==
+                    "AVAILABLE"
+        }
+
+
+    val ocupadas =
+        mesas.count {
+
+            it.estado ==
+                    "OCCUPIED"
+        }
+
+
+    val sucias =
+        mesas.count {
+
+            it.estado ==
+                    "DIRTY"
+        }
+
+
+    val limpieza =
+        mesas.count {
+
+            it.estado ==
+                    "CLEANING"
+        }
+
+
+    Column {
+
+        Text(
+
+            text =
+                "Operación",
+
+            color =
+                NegroPrincipal,
+
+            fontWeight =
+                FontWeight.Bold,
+
+            fontSize =
+                21.sp
+        )
+
+
+        Text(
+
+            text =
+                "Estado actual del restaurante",
+
+            modifier =
+                Modifier.padding(
+                    top =
+                        2.dp
+                ),
+
+            color =
+                GrisTexto,
+
+            fontSize =
+                12.sp
+        )
+
+
+        Spacer(
+
+            modifier =
+                Modifier.height(
+                    12.dp
+                )
+        )
+
+
+        Row(
+
+            modifier =
+                Modifier.fillMaxWidth(),
+
+            horizontalArrangement =
+                Arrangement.spacedBy(
+                    8.dp
+                )
+        ) {
+
+            TarjetaResumenEstado(
+
+                titulo =
+                    "Disponibles",
+
+                cantidad =
+                    disponibles,
+
+                color =
+                    VerdeSmartTable,
+
+                modifier =
+                    Modifier.weight(
+                        1f
+                    )
+            )
+
+
+            TarjetaResumenEstado(
+
+                titulo =
+                    "Ocupadas",
+
+                cantidad =
+                    ocupadas,
+
+                color =
+                    RojoMesa,
+
+                modifier =
+                    Modifier.weight(
+                        1f
+                    )
+            )
+
+
+            TarjetaResumenEstado(
+
+                titulo =
+                    "Sucias",
+
+                cantidad =
+                    sucias,
+
+                color =
+                    AmarilloMesa,
+
+                modifier =
+                    Modifier.weight(
+                        1f
+                    )
+            )
+
+
+            TarjetaResumenEstado(
+
+                titulo =
+                    "Limpieza",
+
+                cantidad =
+                    limpieza,
+
+                color =
+                    NaranjaMesa,
+
+                modifier =
+                    Modifier.weight(
+                        1f
+                    )
+            )
+        }
+    }
+}
+
+
+@Composable
+private fun TarjetaResumenEstado(
+    titulo: String,
+    cantidad: Int,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+
+    Card(
+
+        modifier =
+            modifier,
+
+        shape =
+            RoundedCornerShape(
+                16.dp
+            ),
+
+        colors =
+            CardDefaults.cardColors(
+
+                containerColor =
+                    Color.White
+            ),
+
+        elevation =
+            CardDefaults.cardElevation(
+
+                defaultElevation =
+                    1.dp
+            )
+    ) {
+
+        Column(
+
+            modifier =
+                Modifier.padding(
+                    11.dp
+                )
+        ) {
+
+            Box(
+
+                modifier =
+                    Modifier
+                        .size(
+                            8.dp
+                        )
+                        .background(
+
+                            color =
+                                color,
+
+                            shape =
+                                CircleShape
+                        )
+            )
+
+
+            Spacer(
+
+                modifier =
+                    Modifier.height(
+                        7.dp
+                    )
+            )
 
 
             Text(
 
                 text =
-                    "▼",
+                    cantidad.toString(),
 
                 color =
-                    TextoSecundario
+                    NegroPrincipal,
+
+                fontSize =
+                    20.sp,
+
+                fontWeight =
+                    FontWeight.Bold
+            )
+
+
+            Text(
+
+                text =
+                    titulo,
+
+                color =
+                    GrisTexto,
+
+                fontSize =
+                    9.sp
             )
         }
+    }
+}
 
 
-        DropdownMenu(
+@Composable
+private fun TarjetaNfcPrincipal(
+    resolviendo: Boolean
+) {
 
-            expanded =
-                abierto,
+    Card(
 
-            onDismissRequest = {
+        modifier =
+            Modifier.fillMaxWidth(),
 
-                abierto =
-                    false
+        shape =
+            RoundedCornerShape(
+                22.dp
+            ),
+
+        colors =
+            CardDefaults.cardColors(
+
+                containerColor =
+                    NegroPrincipal
+            ),
+
+        elevation =
+            CardDefaults.cardElevation(
+
+                defaultElevation =
+                    4.dp
+            )
+    ) {
+
+        Row(
+
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        18.dp
+                    ),
+
+            verticalAlignment =
+                Alignment.CenterVertically
+        ) {
+
+            Surface(
+
+                modifier =
+                    Modifier.size(
+                        54.dp
+                    ),
+
+                shape =
+                    RoundedCornerShape(
+                        17.dp
+                    ),
+
+                color =
+                    Color.White.copy(
+                        alpha =
+                            0.12f
+                    )
+            ) {
+
+                Box(
+
+                    contentAlignment =
+                        Alignment.Center
+                ) {
+
+                    Text(
+
+                        text =
+                            "NFC",
+
+                        color =
+                            Color.White,
+
+                        fontWeight =
+                            FontWeight.ExtraBold,
+
+                        fontSize =
+                            13.sp
+                    )
+                }
             }
+
+
+            Spacer(
+
+                modifier =
+                    Modifier.width(
+                        14.dp
+                    )
+            )
+
+
+            Column(
+
+                modifier =
+                    Modifier.weight(
+                        1f
+                    )
+            ) {
+
+                Text(
+
+                    text =
+                        if (
+                            resolviendo
+                        ) {
+
+                            "Identificando mesa..."
+
+                        } else {
+
+                            "Operación NFC"
+                        },
+
+                    color =
+                        Color.White,
+
+                    fontWeight =
+                        FontWeight.Bold,
+
+                    fontSize =
+                        16.sp
+                )
+
+
+                Spacer(
+
+                    modifier =
+                        Modifier.height(
+                            3.dp
+                        )
+                )
+
+
+                Text(
+
+                    text =
+                        if (
+                            resolviendo
+                        ) {
+
+                            "Consultando el estado actual de la mesa."
+
+                        } else {
+
+                            "Acerca el teléfono a una mesa para operar sin buscarla manualmente."
+                        },
+
+                    color =
+                        Color.White.copy(
+                            alpha =
+                                0.72f
+                        ),
+
+                    fontSize =
+                        11.sp,
+
+                    lineHeight =
+                        15.sp
+                )
+            }
+
+
+            if (
+                resolviendo
+            ) {
+
+                CircularProgressIndicator(
+
+                    modifier =
+                        Modifier.size(
+                            25.dp
+                        ),
+
+                    color =
+                        Color.White,
+
+                    strokeWidth =
+                        2.dp
+                )
+
+            } else {
+
+                Surface(
+
+                    shape =
+                        RoundedCornerShape(
+                            50.dp
+                        ),
+
+                    color =
+                        VerdeSmartTable
+                ) {
+
+                    Text(
+
+                        text =
+                            "LISTO",
+
+                        modifier =
+                            Modifier.padding(
+
+                                horizontal =
+                                    10.dp,
+
+                                vertical =
+                                    6.dp
+                            ),
+
+                        color =
+                            Color.White,
+
+                        fontSize =
+                            9.sp,
+
+                        fontWeight =
+                            FontWeight.Bold
+                    )
+                }
+            }
+        }
+    }
+}
+
+
+@Composable
+private fun SelectorPisos(
+    pisos: List<Piso>,
+    pisoSeleccionadoId: Int?,
+    onSeleccionar: (Int) -> Unit
+) {
+
+    Column {
+
+        Text(
+
+            text =
+                "Zona",
+
+            color =
+                NegroPrincipal,
+
+            fontWeight =
+                FontWeight.Bold,
+
+            fontSize =
+                15.sp
+        )
+
+
+        Spacer(
+
+            modifier =
+                Modifier.height(
+                    9.dp
+                )
+        )
+
+
+        Row(
+
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(
+                        rememberScrollState()
+                    ),
+
+            horizontalArrangement =
+                Arrangement.spacedBy(
+                    8.dp
+                )
         ) {
 
             pisos.forEach {
                     piso ->
 
-                DropdownMenuItem(
+                val seleccionado =
+                    piso.id ==
+                            pisoSeleccionadoId
 
-                    text = {
 
-                        Text(
-                            text =
-                                piso.nombre
-                        )
-                    },
+                Surface(
 
                     onClick = {
-
-                        abierto =
-                            false
-
 
                         onSeleccionar(
                             piso.id
                         )
-                    }
-                )
+                    },
+
+                    shape =
+                        RoundedCornerShape(
+                            50.dp
+                        ),
+
+                    color =
+                        if (
+                            seleccionado
+                        ) {
+
+                            NegroPrincipal
+
+                        } else {
+
+                            Color.White
+                        },
+
+                    border =
+                        if (
+                            seleccionado
+                        ) {
+
+                            null
+
+                        } else {
+
+                            androidx.compose.foundation.BorderStroke(
+
+                                width =
+                                    1.dp,
+
+                                color =
+                                    Color(
+                                        0xFFE2E8F0
+                                    )
+                            )
+                        }
+                ) {
+
+                    Text(
+
+                        text =
+                            piso.nombre,
+
+                        modifier =
+                            Modifier.padding(
+
+                                horizontal =
+                                    16.dp,
+
+                                vertical =
+                                    9.dp
+                            ),
+
+                        color =
+                            if (
+                                seleccionado
+                            ) {
+
+                                Color.White
+
+                            } else {
+
+                                NegroPrincipal
+                            },
+
+                        fontSize =
+                            12.sp,
+
+                        fontWeight =
+                            FontWeight.SemiBold
+                    )
+                }
             }
         }
     }
@@ -873,78 +1589,51 @@ private fun SelectorPiso(
 @Composable
 private fun LeyendaEstados() {
 
-    Column(
+    Row(
 
-        verticalArrangement =
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .horizontalScroll(
+                    rememberScrollState()
+                ),
+
+        horizontalArrangement =
             Arrangement.spacedBy(
-                5.dp
+                12.dp
             )
     ) {
 
-        Row(
-
-            horizontalArrangement =
-                Arrangement.spacedBy(
-                    14.dp
-                )
-        ) {
-
-            ItemLeyenda(
-
-                nombre =
-                    "Disponible",
-
-                color =
-                    Color(
-                        0xFF10B981
-                    )
-            )
+        ItemLeyenda(
+            nombre =
+                "Disponible",
+            color =
+                VerdeSmartTable
+        )
 
 
-            ItemLeyenda(
-
-                nombre =
-                    "Ocupada",
-
-                color =
-                    Color(
-                        0xFFF43F5E
-                    )
-            )
-        }
+        ItemLeyenda(
+            nombre =
+                "Ocupada",
+            color =
+                RojoMesa
+        )
 
 
-        Row(
-
-            horizontalArrangement =
-                Arrangement.spacedBy(
-                    14.dp
-                )
-        ) {
-
-            ItemLeyenda(
-
-                nombre =
-                    "Sucia",
-
-                color =
-                    Color(
-                        0xFFF59E0B
-                    )
-            )
+        ItemLeyenda(
+            nombre =
+                "Sucia",
+            color =
+                AmarilloMesa
+        )
 
 
-            ItemLeyenda(
-
-                nombre =
-                    "Limpieza",
-
-                color =
-                    Color(
-                        0xFFF97316
-                    )
-            )
-        }
+        ItemLeyenda(
+            nombre =
+                "Limpieza",
+            color =
+                NaranjaMesa
+        )
     }
 }
 
@@ -966,7 +1655,7 @@ private fun ItemLeyenda(
             modifier =
                 Modifier
                     .size(
-                        9.dp
+                        8.dp
                     )
                     .background(
 
@@ -980,6 +1669,7 @@ private fun ItemLeyenda(
 
 
         Spacer(
+
             modifier =
                 Modifier.width(
                     5.dp
@@ -993,10 +1683,10 @@ private fun ItemLeyenda(
                 nombre,
 
             color =
-                TextoSecundario,
+                GrisTexto,
 
             fontSize =
-                11.sp
+                10.sp
         )
     }
 }
@@ -1015,29 +1705,10 @@ private fun PlanoMesas(
             Modifier
                 .fillMaxSize()
                 .padding(
-                    10.dp
-                )
-                .background(
-
-                    color =
-                        Color(
-                            0xFFF8FAFC
-                        ),
-
-                    shape =
-                        RoundedCornerShape(
-                            16.dp
-                        )
+                    8.dp
                 )
     ) {
 
-        /*
-         * Utilizamos las mismas coordenadas
-         * configuradas desde la aplicación Web.
-         *
-         * El espacio lógico del editor web se
-         * escala al tamaño disponible en móvil.
-         */
         val escalaX =
             maxWidth.value /
                     900f
@@ -1076,11 +1747,11 @@ private fun PlanoMesas(
                     esRedonda
                 ) {
 
-                    67.dp
+                    68.dp
 
                 } else {
 
-                    82.dp
+                    83.dp
                 }
 
 
@@ -1089,11 +1760,11 @@ private fun PlanoMesas(
                     esRedonda
                 ) {
 
-                    67.dp
+                    68.dp
 
                 } else {
 
-                    58.dp
+                    60.dp
                 }
 
 
@@ -1163,7 +1834,7 @@ private fun PlanoMesas(
                                         3.dp,
 
                                     color =
-                                        TextoPrincipal,
+                                        NegroPrincipal,
 
                                     shape =
                                         forma
@@ -1183,8 +1854,8 @@ private fun PlanoMesas(
                         mesa.estado
                     ),
 
-                tonalElevation =
-                    2.dp
+                shadowElevation =
+                    4.dp
             ) {
 
                 Column(
@@ -1208,7 +1879,7 @@ private fun PlanoMesas(
                             Color.White,
 
                         fontWeight =
-                            FontWeight.Bold,
+                            FontWeight.ExtraBold,
 
                         fontSize =
                             15.sp
@@ -1218,16 +1889,16 @@ private fun PlanoMesas(
                     Text(
 
                         text =
-                            "${mesa.capacidad} p.",
+                            "${mesa.capacidad} pers.",
 
                         color =
                             Color.White.copy(
                                 alpha =
-                                    0.9f
+                                    0.82f
                             ),
 
                         fontSize =
-                            10.sp
+                            9.sp
                     )
                 }
             }
@@ -1308,25 +1979,30 @@ private fun DetalleMesaDialog(
 
             shape =
                 RoundedCornerShape(
-                    24.dp
+                    28.dp
                 ),
 
             color =
-                Color.White
+                Color.White,
+
+            shadowElevation =
+                10.dp
         ) {
 
             Column(
 
                 modifier =
                     Modifier.padding(
-                        20.dp
+                        22.dp
                     )
             ) {
 
                 /*
-                 * Si la mesa fue localizada mediante NFC
-                 * lo hacemos muy evidente.
+                 * =================================================
+                 * ORIGEN NFC
+                 * =================================================
                  */
+
                 if (
                     metodoSeleccionMesa ==
                     "NFC"
@@ -1343,36 +2019,65 @@ private fun DetalleMesaDialog(
                             ),
 
                         color =
-                            Color(
-                                0xFFECFDF5
-                            )
+                            VerdeSuave
                     ) {
 
                         Row(
 
                             modifier =
                                 Modifier.padding(
-                                    11.dp
+                                    12.dp
                                 ),
 
                             verticalAlignment =
                                 Alignment.CenterVertically
                         ) {
 
-                            Text(
+                            Surface(
 
-                                text =
-                                    "📡",
+                                modifier =
+                                    Modifier.size(
+                                        34.dp
+                                    ),
 
-                                fontSize =
-                                    21.sp
-                            )
+                                shape =
+                                    RoundedCornerShape(
+                                        10.dp
+                                    ),
+
+                                color =
+                                    VerdeSmartTable
+                            ) {
+
+                                Box(
+
+                                    contentAlignment =
+                                        Alignment.Center
+                                ) {
+
+                                    Text(
+
+                                        text =
+                                            "NFC",
+
+                                        color =
+                                            Color.White,
+
+                                        fontSize =
+                                            9.sp,
+
+                                        fontWeight =
+                                            FontWeight.ExtraBold
+                                    )
+                                }
+                            }
 
 
                             Spacer(
+
                                 modifier =
                                     Modifier.width(
-                                        8.dp
+                                        10.dp
                                     )
                             )
 
@@ -1400,14 +2105,14 @@ private fun DetalleMesaDialog(
                                 Text(
 
                                     text =
-                                        "Estás operando la mesa física que acabas de escanear.",
+                                        "Operación sobre la mesa física escaneada.",
 
                                     color =
                                         Color(
                                             0xFF047857
                                         ).copy(
                                             alpha =
-                                                0.8f
+                                                0.75f
                                         ),
 
                                     fontSize =
@@ -1419,15 +2124,25 @@ private fun DetalleMesaDialog(
 
 
                     Spacer(
+
                         modifier =
                             Modifier.height(
-                                14.dp
+                                16.dp
                             )
                     )
                 }
 
 
+                /*
+                 * =================================================
+                 * MESA
+                 * =================================================
+                 */
+
                 Row(
+
+                    modifier =
+                        Modifier.fillMaxWidth(),
 
                     verticalAlignment =
                         Alignment.Top
@@ -1446,36 +2161,48 @@ private fun DetalleMesaDialog(
                             text =
                                 "Mesa ${mesa.numero}",
 
-                            fontSize =
-                                24.sp,
+                            color =
+                                NegroPrincipal,
 
                             fontWeight =
-                                FontWeight.Bold,
+                                FontWeight.ExtraBold,
 
-                            color =
-                                TextoPrincipal
+                            fontSize =
+                                27.sp
+                        )
+
+
+                        Spacer(
+
+                            modifier =
+                                Modifier.height(
+                                    3.dp
+                                )
                         )
 
 
                         Text(
 
                             text =
-                                "${mesa.capacidad} ${
+                                "Capacidad ${mesa.capacidad} ${
                                     if (
                                         mesa.capacidad ==
                                         1
                                     ) {
+
                                         "persona"
+
                                     } else {
+
                                         "personas"
                                     }
                                 }",
 
                             color =
-                                TextoSecundario,
+                                GrisTexto,
 
                             fontSize =
-                                13.sp
+                                12.sp
                         )
                     }
 
@@ -1491,8 +2218,14 @@ private fun DetalleMesaDialog(
 
                     modifier =
                         Modifier.padding(
+
                             vertical =
-                                16.dp
+                                18.dp
+                        ),
+
+                    color =
+                        Color(
+                            0xFFE5E7EB
                         )
                 )
 
@@ -1557,10 +2290,6 @@ private fun DetalleMesaDialog(
 
                         ContenidoMesaSucia(
 
-                            /*
-                             * El mesero también puede
-                             * colaborar con limpieza.
-                             */
                             puedeLimpiar =
                                 rolUsuario in
                                         listOf(
@@ -1612,25 +2341,28 @@ private fun DetalleMesaDialog(
                         Text(
 
                             text =
-                                "La mesa no tiene acciones disponibles en este momento.",
+                                "No existen acciones disponibles para esta mesa.",
 
                             color =
-                                TextoSecundario
+                                GrisTexto
                         )
                     }
                 }
 
 
                 /*
-                 * Vincular etiquetas es una operación
-                 * administrativa, no operativa.
+                 * =================================================
+                 * NFC ADMIN
+                 * =================================================
                  */
+
                 if (
                     rolUsuario ==
                     "ADMIN"
                 ) {
 
                     Spacer(
+
                         modifier =
                             Modifier.height(
                                 18.dp
@@ -1638,10 +2370,16 @@ private fun DetalleMesaDialog(
                     )
 
 
-                    HorizontalDivider()
+                    HorizontalDivider(
+                        color =
+                            Color(
+                                0xFFE5E7EB
+                            )
+                    )
 
 
                     Spacer(
+
                         modifier =
                             Modifier.height(
                                 14.dp
@@ -1655,21 +2393,34 @@ private fun DetalleMesaDialog(
                             onVincularNfc,
 
                         modifier =
-                            Modifier.fillMaxWidth()
+                            Modifier.fillMaxWidth(),
+
+                        shape =
+                            RoundedCornerShape(
+                                14.dp
+                            )
                     ) {
 
                         Text(
+
                             text =
-                                "📡 Vincular / reemplazar NFC"
+                                "NFC · Vincular o reemplazar etiqueta",
+
+                            color =
+                                NegroPrincipal,
+
+                            fontWeight =
+                                FontWeight.SemiBold
                         )
                     }
                 }
 
 
                 Spacer(
+
                     modifier =
                         Modifier.height(
-                            12.dp
+                            10.dp
                         )
                 )
 
@@ -1697,7 +2448,7 @@ private fun DetalleMesaDialog(
 
     /*
      * =========================================================
-     * CONFIRMAR ASIGNACIÓN
+     * ASIGNAR TURNO
      * =========================================================
      */
 
@@ -1720,130 +2471,214 @@ private fun DetalleMesaDialog(
                 )
 
 
-        AlertDialog(
-
-            onDismissRequest = {
-
-                turnoConfirmacion =
-                    null
-            },
-
-            title = {
-
-                Text(
-
-                    text =
-                        if (
-                            personasExtra >
-                            0
-                        ) {
-
-                            "Autorizar excepción"
-
-                        } else {
-
-                            "Confirmar cliente"
-                        }
-                )
-            },
-
-            text = {
-
-                Text(
-
-                    text =
-                        buildString {
-
-                            append(
-                                "Mesa ${mesa.numero}\n"
-                            )
+        val puedeAutorizarExceso =
+            rolUsuario in
+                    listOf(
+                        "ADMIN",
+                        "HOSTESS"
+                    )
 
 
-                            append(
-                                "Capacidad: ${mesa.capacidad}\n\n"
-                            )
+        /*
+         * Un mesero no debería llegar normalmente
+         * a este diálogo con un turno incompatible.
+         */
+        if (
+            personasExtra ==
+            0 ||
+            puedeAutorizarExceso
+        ) {
 
+            AlertDialog(
 
-                            append(
-                                "Turno #${turno.numero}\n"
-                            )
+                onDismissRequest = {
 
+                    turnoConfirmacion =
+                        null
+                },
 
-                            append(
-                                "${turno.nombre}\n"
-                            )
+                title = {
 
+                    Text(
 
-                            append(
-                                "${turno.personas} personas"
-                            )
-
-
+                        text =
                             if (
                                 personasExtra >
                                 0
                             ) {
 
-                                append(
-                                    "\n\nEl grupo excede la capacidad por $personasExtra persona(s)."
+                                "Autorizar excepción"
+
+                            } else {
+
+                                "Confirmar cliente"
+                            }
+                    )
+                },
+
+                text = {
+
+                    Column {
+
+                        Text(
+
+                            text =
+                                "Turno #${turno.numero}",
+
+                            color =
+                                NegroPrincipal,
+
+                            fontSize =
+                                18.sp,
+
+                            fontWeight =
+                                FontWeight.Bold
+                        )
+
+
+                        Text(
+
+                            text =
+                                turno.nombre,
+
+                            modifier =
+                                Modifier.padding(
+                                    top =
+                                        4.dp
+                                ),
+
+                            color =
+                                NegroPrincipal
+                        )
+
+
+                        Text(
+
+                            text =
+                                "${turno.personas} personas · Mesa ${mesa.numero}",
+
+                            modifier =
+                                Modifier.padding(
+                                    top =
+                                        3.dp
+                                ),
+
+                            color =
+                                GrisTexto
+                        )
+
+
+                        if (
+                            personasExtra >
+                            0
+                        ) {
+
+                            Spacer(
+
+                                modifier =
+                                    Modifier.height(
+                                        12.dp
+                                    )
+                            )
+
+
+                            Surface(
+
+                                modifier =
+                                    Modifier.fillMaxWidth(),
+
+                                shape =
+                                    RoundedCornerShape(
+                                        12.dp
+                                    ),
+
+                                color =
+                                    Color(
+                                        0xFFFFF7ED
+                                    )
+                            ) {
+
+                                Text(
+
+                                    text =
+                                        "El grupo excede la capacidad por $personasExtra persona(s). Esta acción quedará registrada como excepción.",
+
+                                    modifier =
+                                        Modifier.padding(
+                                            12.dp
+                                        ),
+
+                                    color =
+                                        Color(
+                                            0xFFB45309
+                                        ),
+
+                                    fontSize =
+                                        11.sp,
+
+                                    lineHeight =
+                                        15.sp
                                 )
                             }
-
-
-                            append(
-                                "\n\nConfirma únicamente después de verificar físicamente al cliente."
-                            )
                         }
-                )
-            },
+                    }
+                },
 
-            confirmButton = {
+                confirmButton = {
 
-                Button(
+                    Button(
 
-                    onClick = {
+                        onClick = {
 
-                        turnoConfirmacion =
-                            null
+                            turnoConfirmacion =
+                                null
 
 
-                        onAsignar(
-                            turno
+                            onAsignar(
+                                turno
+                            )
+                        },
+
+                        colors =
+                            ButtonDefaults.buttonColors(
+
+                                containerColor =
+                                    NegroPrincipal
+                            )
+                    ) {
+
+                        Text(
+                            text =
+                                "Confirmar"
                         )
                     }
-                ) {
+                },
 
-                    Text(
-                        text =
-                            "Confirmar"
-                    )
-                }
-            },
+                dismissButton = {
 
-            dismissButton = {
+                    TextButton(
 
-                TextButton(
+                        onClick = {
 
-                    onClick = {
+                            turnoConfirmacion =
+                                null
+                        }
+                    ) {
 
-                        turnoConfirmacion =
-                            null
+                        Text(
+                            text =
+                                "Cancelar"
+                        )
                     }
-                ) {
-
-                    Text(
-                        text =
-                            "Cancelar"
-                    )
                 }
-            }
-        )
+            )
+        }
     }
 
 
     /*
      * =========================================================
-     * CLIENTES SE RETIRARON
+     * CLIENTES RETIRADOS
      * =========================================================
      */
 
@@ -1863,15 +2698,16 @@ private fun DetalleMesaDialog(
 
                 Text(
                     text =
-                        "Clientes se retiraron"
+                        "¿Los clientes se retiraron?"
                 )
             },
 
             text = {
 
                 Text(
+
                     text =
-                        "La Mesa ${mesa.numero} pasará a pendiente de limpieza."
+                        "La Mesa ${mesa.numero} quedará marcada como pendiente de limpieza."
                 )
             },
 
@@ -1886,12 +2722,19 @@ private fun DetalleMesaDialog(
 
 
                         onClientesRetirados()
-                    }
+                    },
+
+                    colors =
+                        ButtonDefaults.buttonColors(
+
+                            containerColor =
+                                AmarilloMesa
+                        )
                 ) {
 
                     Text(
                         text =
-                            "Confirmar"
+                            "Sí, se retiraron"
                     )
                 }
             },
@@ -1946,8 +2789,9 @@ private fun DetalleMesaDialog(
             text = {
 
                 Text(
+
                     text =
-                        "¿Comenzar la limpieza de la Mesa ${mesa.numero}?"
+                        "¿Confirmas que comenzará la limpieza de la Mesa ${mesa.numero}?"
                 )
             },
 
@@ -1962,7 +2806,14 @@ private fun DetalleMesaDialog(
 
 
                         onIniciarLimpieza()
-                    }
+                    },
+
+                    colors =
+                        ButtonDefaults.buttonColors(
+
+                            containerColor =
+                                NaranjaMesa
+                        )
                 ) {
 
                     Text(
@@ -2015,15 +2866,16 @@ private fun DetalleMesaDialog(
 
                 Text(
                     text =
-                        "Finalizar limpieza"
+                        "Mesa lista"
                 )
             },
 
             text = {
 
                 Text(
+
                     text =
-                        "La Mesa ${mesa.numero} volverá a estar disponible."
+                        "¿La Mesa ${mesa.numero} ya está limpia y disponible para nuevos clientes?"
                 )
             },
 
@@ -2038,12 +2890,19 @@ private fun DetalleMesaDialog(
 
 
                         onFinalizarLimpieza()
-                    }
+                    },
+
+                    colors =
+                        ButtonDefaults.buttonColors(
+
+                            containerColor =
+                                VerdeSmartTable
+                        )
                 ) {
 
                     Text(
                         text =
-                            "Finalizar"
+                            "Marcar disponible"
                     )
                 }
             },
@@ -2092,13 +2951,16 @@ private fun ContenidoMesaDisponible(
         !puedeAsignar
     ) {
 
-        Text(
+        MensajeEstado(
 
-            text =
-                "La mesa está disponible. Tu rol no necesita realizar ninguna acción.",
+            titulo =
+                "Mesa disponible",
+
+            descripcion =
+                "No hay acciones necesarias para tu rol.",
 
             color =
-                TextoSecundario
+                VerdeSmartTable
         )
 
 
@@ -2109,23 +2971,23 @@ private fun ContenidoMesaDisponible(
     Text(
 
         text =
-            "¿Quién ocupará esta mesa?",
+            "¿Quién se sentó aquí?",
 
         color =
-            TextoPrincipal,
+            NegroPrincipal,
 
         fontWeight =
             FontWeight.Bold,
 
         fontSize =
-            17.sp
+            19.sp
     )
 
 
     Text(
 
         text =
-            "Verifica el número de turno y el nombre del cliente.",
+            "Verifica el número de turno y el nombre antes de confirmar.",
 
         modifier =
             Modifier.padding(
@@ -2134,17 +2996,21 @@ private fun ContenidoMesaDisponible(
             ),
 
         color =
-            TextoSecundario,
+            GrisTexto,
 
         fontSize =
-            12.sp
+            11.sp,
+
+        lineHeight =
+            15.sp
     )
 
 
     Spacer(
+
         modifier =
             Modifier.height(
-                14.dp
+                15.dp
             )
     )
 
@@ -2187,16 +3053,16 @@ private fun ContenidoMesaDisponible(
         turnos.isEmpty()
     ) {
 
-        Text(
+        MensajeEstado(
 
-            text =
-                "No hay turnos disponibles para esta mesa.",
+            titulo =
+                "Sin turnos pendientes",
+
+            descripcion =
+                "No hay clientes esperando que puedan asignarse en este momento.",
 
             color =
-                TextoSecundario,
-
-            fontSize =
-                13.sp
+                GrisTexto
         )
 
 
@@ -2214,7 +3080,7 @@ private fun ContenidoMesaDisponible(
 
         verticalArrangement =
             Arrangement.spacedBy(
-                8.dp
+                9.dp
             )
     ) {
 
@@ -2231,19 +3097,40 @@ private fun ContenidoMesaDisponible(
         ) {
                 turno ->
 
+            val capacidad =
+                contextoMesa
+                    ?.mesa
+                    ?.capacidad
+                    ?: 0
+
+
+            val excede =
+                turno.personas >
+                        capacidad
+
+
+            val usuarioPuedeAutorizarExceso =
+                rolUsuario in
+                        listOf(
+                            "ADMIN",
+                            "HOSTESS"
+                        )
+
+
             TurnoCard(
 
                 turno =
                     turno,
 
                 capacidadMesa =
-                    contextoMesa
-                        ?.mesa
-                        ?.capacidad
-                        ?: 0,
+                    capacidad,
 
                 habilitado =
-                    !ejecutandoAccion,
+                    !ejecutandoAccion &&
+                            (
+                                    !excede ||
+                                            usuarioPuedeAutorizarExceso
+                                    ),
 
                 onClick = {
 
@@ -2275,7 +3162,7 @@ private fun TurnoCard(
             )
 
 
-    Surface(
+    Card(
 
         onClick =
             onClick,
@@ -2288,24 +3175,42 @@ private fun TurnoCard(
 
         shape =
             RoundedCornerShape(
-                14.dp
+                16.dp
             ),
 
-        color =
-            if (
-                turno.coincidePreferencia
-            ) {
+        colors =
+            CardDefaults.cardColors(
 
-                Color(
-                    0xFFF0FDF4
-                )
+                containerColor =
 
-            } else {
+                    when {
 
-                Color(
-                    0xFFF8FAFC
-                )
-            }
+                        !habilitado ->
+
+                            Color(
+                                0xFFF8FAFC
+                            )
+
+
+                        turno.coincidePreferencia ->
+
+                            VerdeSuave
+
+
+                        else ->
+
+                            Color(
+                                0xFFF8FAFC
+                            )
+                    }
+            ),
+
+        elevation =
+            CardDefaults.cardElevation(
+
+                defaultElevation =
+                    0.dp
+            )
     ) {
 
         Row(
@@ -2319,6 +3224,66 @@ private fun TurnoCard(
                 Alignment.CenterVertically
         ) {
 
+            Surface(
+
+                modifier =
+                    Modifier.size(
+                        42.dp
+                    ),
+
+                shape =
+                    RoundedCornerShape(
+                        13.dp
+                    ),
+
+                color =
+                    if (
+                        habilitado
+                    ) {
+
+                        NegroPrincipal
+
+                    } else {
+
+                        Color(
+                            0xFFCBD5E1
+                        )
+                    }
+            ) {
+
+                Box(
+
+                    contentAlignment =
+                        Alignment.Center
+                ) {
+
+                    Text(
+
+                        text =
+                            "#${turno.numero}",
+
+                        color =
+                            Color.White,
+
+                        fontSize =
+                            11.sp,
+
+                        fontWeight =
+                            FontWeight.Bold
+                    )
+                }
+            }
+
+
+            Spacer(
+
+                modifier =
+                    Modifier.width(
+                        11.dp
+                    )
+            )
+
+
             Column(
 
                 modifier =
@@ -2330,23 +3295,22 @@ private fun TurnoCard(
                 Text(
 
                     text =
-                        "Turno #${turno.numero}",
-
-                    color =
-                        TextoPrincipal,
-
-                    fontWeight =
-                        FontWeight.Bold
-                )
-
-
-                Text(
-
-                    text =
                         turno.nombre,
 
                     color =
-                        TextoPrincipal,
+                        if (
+                            habilitado
+                        ) {
+
+                            NegroPrincipal
+
+                        } else {
+
+                            GrisTexto
+                        },
+
+                    fontWeight =
+                        FontWeight.Bold,
 
                     fontSize =
                         14.sp
@@ -2356,16 +3320,7 @@ private fun TurnoCard(
                 Text(
 
                     text =
-                        "${turno.personas} ${
-                            if (
-                                turno.personas ==
-                                1
-                            ) {
-                                "persona"
-                            } else {
-                                "personas"
-                            }
-                        } · ${
+                        "${turno.personas} personas · ${
                             turno.pisoPreferido
                                 ?.nombre
                                 ?: "Sin preferencia"
@@ -2374,25 +3329,26 @@ private fun TurnoCard(
                     modifier =
                         Modifier.padding(
                             top =
-                                3.dp
+                                2.dp
                         ),
 
                     color =
-                        TextoSecundario,
+                        GrisTexto,
 
                     fontSize =
-                        11.sp
+                        10.sp
                 )
 
 
                 if (
-                    turno.coincidePreferencia
+                    turno.coincidePreferencia &&
+                    habilitado
                 ) {
 
                     Text(
 
                         text =
-                            "Prefiere esta zona",
+                            "Coincide con la zona preferida",
 
                         modifier =
                             Modifier.padding(
@@ -2404,7 +3360,38 @@ private fun TurnoCard(
                             VerdeSmartTable,
 
                         fontSize =
-                            10.sp,
+                            9.sp,
+
+                        fontWeight =
+                            FontWeight.Bold
+                    )
+                }
+
+
+                if (
+                    !habilitado &&
+                    personasExtra >
+                    0
+                ) {
+
+                    Text(
+
+                        text =
+                            "Requiere autorización por capacidad",
+
+                        modifier =
+                            Modifier.padding(
+                                top =
+                                    4.dp
+                            ),
+
+                        color =
+                            Color(
+                                0xFFB45309
+                            ),
+
+                        fontSize =
+                            9.sp,
 
                         fontWeight =
                             FontWeight.SemiBold
@@ -2418,38 +3405,73 @@ private fun TurnoCard(
                 0
             ) {
 
-                Text(
+                Surface(
 
-                    text =
-                        "+$personasExtra",
+                    shape =
+                        RoundedCornerShape(
+                            50.dp
+                        ),
 
                     color =
                         Color(
-                            0xFFB45309
-                        ),
+                            0xFFFFF7ED
+                        )
+                ) {
 
-                    fontWeight =
-                        FontWeight.Bold,
+                    Text(
 
-                    fontSize =
-                        12.sp
-                )
+                        text =
+                            "+$personasExtra",
+
+                        modifier =
+                            Modifier.padding(
+
+                                horizontal =
+                                    8.dp,
+
+                                vertical =
+                                    5.dp
+                            ),
+
+                        color =
+                            Color(
+                                0xFFB45309
+                            ),
+
+                        fontWeight =
+                            FontWeight.Bold,
+
+                        fontSize =
+                            10.sp
+                    )
+                }
 
             } else {
 
                 Text(
 
                     text =
-                        "Compatible",
+                        "Asignar",
 
                     color =
-                        VerdeSmartTable,
+                        if (
+                            habilitado
+                        ) {
 
-                    fontWeight =
-                        FontWeight.SemiBold,
+                            VerdeSmartTable
+
+                        } else {
+
+                            Color(
+                                0xFF94A3B8
+                            )
+                        },
 
                     fontSize =
-                        10.sp
+                        10.sp,
+
+                    fontWeight =
+                        FontWeight.Bold
                 )
             }
         }
@@ -2474,97 +3496,126 @@ private fun ContenidoMesaOcupada(
         null
     ) {
 
-        Text(
-
-            text =
-                "Turno #${turno.numero}",
-
-            color =
-                TextoPrincipal,
-
-            fontSize =
-                20.sp,
-
-            fontWeight =
-                FontWeight.Bold
-        )
-
-
-        Text(
-
-            text =
-                turno.nombre,
+        Surface(
 
             modifier =
-                Modifier.padding(
-                    top =
-                        4.dp
+                Modifier.fillMaxWidth(),
+
+            shape =
+                RoundedCornerShape(
+                    16.dp
                 ),
 
             color =
-                TextoPrincipal
-        )
-
-
-        Text(
-
-            text =
-                "${turno.personas} ${
-                    if (
-                        turno.personas ==
-                        1
-                    ) {
-                        "persona"
-                    } else {
-                        "personas"
-                    }
-                }",
-
-            modifier =
-                Modifier.padding(
-                    top =
-                        3.dp
-                ),
-
-            color =
-                TextoSecundario
-        )
-
-
-        if (
-            turno.excedeCapacidad
+                Color(
+                    0xFFFEF2F2
+                )
         ) {
 
-            Text(
-
-                text =
-                    "Excepción autorizada: +${turno.personasExtra}",
+            Column(
 
                 modifier =
                     Modifier.padding(
-                        top =
-                            8.dp
-                    ),
+                        15.dp
+                    )
+            ) {
 
-                color =
-                    Color(
-                        0xFFB45309
-                    ),
+                Text(
 
-                fontSize =
-                    12.sp
-            )
+                    text =
+                        "Turno #${turno.numero}",
+
+                    color =
+                        NegroPrincipal,
+
+                    fontSize =
+                        19.sp,
+
+                    fontWeight =
+                        FontWeight.Bold
+                )
+
+
+                Text(
+
+                    text =
+                        turno.nombre,
+
+                    modifier =
+                        Modifier.padding(
+                            top =
+                                3.dp
+                        ),
+
+                    color =
+                        NegroPrincipal,
+
+                    fontSize =
+                        14.sp
+                )
+
+
+                Text(
+
+                    text =
+                        "${turno.personas} personas",
+
+                    modifier =
+                        Modifier.padding(
+                            top =
+                                2.dp
+                        ),
+
+                    color =
+                        GrisTexto,
+
+                    fontSize =
+                        11.sp
+                )
+
+
+                if (
+                    turno.excedeCapacidad
+                ) {
+
+                    Text(
+
+                        text =
+                            "Excepción autorizada · +${turno.personasExtra}",
+
+                        modifier =
+                            Modifier.padding(
+                                top =
+                                    7.dp
+                            ),
+
+                        color =
+                            Color(
+                                0xFFB45309
+                            ),
+
+                        fontWeight =
+                            FontWeight.SemiBold,
+
+                        fontSize =
+                            10.sp
+                    )
+                }
+            }
         }
 
     } else {
 
-        Text(
+        MensajeEstado(
 
-            text =
-                "La mesa se encuentra ocupada.",
+            titulo =
+                "Mesa ocupada",
+
+            descripcion =
+                "Existe una sesión activa en esta mesa.",
 
             color =
-                TextoSecundario
+                RojoMesa
         )
     }
 
@@ -2574,6 +3625,7 @@ private fun ContenidoMesaOcupada(
     ) {
 
         Spacer(
+
             modifier =
                 Modifier.height(
                     18.dp
@@ -2590,21 +3642,32 @@ private fun ContenidoMesaOcupada(
                 !ejecutando,
 
             modifier =
-                Modifier.fillMaxWidth(),
+                Modifier
+                    .fillMaxWidth()
+                    .height(
+                        52.dp
+                    ),
+
+            shape =
+                RoundedCornerShape(
+                    14.dp
+                ),
 
             colors =
                 ButtonDefaults.buttonColors(
 
                     containerColor =
-                        Color(
-                            0xFFF59E0B
-                        )
+                        AmarilloMesa
                 )
         ) {
 
             Text(
+
                 text =
-                    "Clientes se retiraron"
+                    "Clientes se retiraron",
+
+                fontWeight =
+                    FontWeight.Bold
             )
         }
     }
@@ -2618,40 +3681,16 @@ private fun ContenidoMesaSucia(
     onIniciar: () -> Unit
 ) {
 
-    Text(
+    MensajeEstado(
 
-        text =
+        titulo =
             "Pendiente de limpieza",
 
-        color =
-            Color(
-                0xFFB45309
-            ),
-
-        fontWeight =
-            FontWeight.Bold,
-
-        fontSize =
-            18.sp
-    )
-
-
-    Text(
-
-        text =
-            "La mesa debe limpiarse antes de volver a recibir clientes.",
-
-        modifier =
-            Modifier.padding(
-                top =
-                    6.dp
-            ),
+        descripcion =
+            "La mesa necesita atención antes de volver a recibir clientes.",
 
         color =
-            TextoSecundario,
-
-        fontSize =
-            13.sp
+            AmarilloMesa
     )
 
 
@@ -2660,6 +3699,7 @@ private fun ContenidoMesaSucia(
     ) {
 
         Spacer(
+
             modifier =
                 Modifier.height(
                     18.dp
@@ -2676,21 +3716,32 @@ private fun ContenidoMesaSucia(
                 !ejecutando,
 
             modifier =
-                Modifier.fillMaxWidth(),
+                Modifier
+                    .fillMaxWidth()
+                    .height(
+                        52.dp
+                    ),
+
+            shape =
+                RoundedCornerShape(
+                    14.dp
+                ),
 
             colors =
                 ButtonDefaults.buttonColors(
 
                     containerColor =
-                        Color(
-                            0xFFF59E0B
-                        )
+                        NaranjaMesa
                 )
         ) {
 
             Text(
+
                 text =
-                    "Iniciar limpieza"
+                    "Iniciar limpieza",
+
+                fontWeight =
+                    FontWeight.Bold
             )
         }
     }
@@ -2704,40 +3755,16 @@ private fun ContenidoMesaLimpieza(
     onFinalizar: () -> Unit
 ) {
 
-    Text(
+    MensajeEstado(
 
-        text =
+        titulo =
             "Limpieza en proceso",
 
-        color =
-            Color(
-                0xFFEA580C
-            ),
-
-        fontWeight =
-            FontWeight.Bold,
-
-        fontSize =
-            18.sp
-    )
-
-
-    Text(
-
-        text =
-            "Confirma cuando la mesa esté lista para recibir clientes nuevamente.",
-
-        modifier =
-            Modifier.padding(
-                top =
-                    6.dp
-            ),
+        descripcion =
+            "Cuando termine, confirma para liberar inmediatamente la mesa.",
 
         color =
-            TextoSecundario,
-
-        fontSize =
-            13.sp
+            NaranjaMesa
     )
 
 
@@ -2746,6 +3773,7 @@ private fun ContenidoMesaLimpieza(
     ) {
 
         Spacer(
+
             modifier =
                 Modifier.height(
                     18.dp
@@ -2762,7 +3790,16 @@ private fun ContenidoMesaLimpieza(
                 !ejecutando,
 
             modifier =
-                Modifier.fillMaxWidth(),
+                Modifier
+                    .fillMaxWidth()
+                    .height(
+                        52.dp
+                    ),
+
+            shape =
+                RoundedCornerShape(
+                    14.dp
+                ),
 
             colors =
                 ButtonDefaults.buttonColors(
@@ -2773,9 +3810,123 @@ private fun ContenidoMesaLimpieza(
         ) {
 
             Text(
+
                 text =
-                    "Finalizar limpieza"
+                    "Finalizar y liberar mesa",
+
+                fontWeight =
+                    FontWeight.Bold
             )
+        }
+    }
+}
+
+
+@Composable
+private fun MensajeEstado(
+    titulo: String,
+    descripcion: String,
+    color: Color
+) {
+
+    Surface(
+
+        modifier =
+            Modifier.fillMaxWidth(),
+
+        shape =
+            RoundedCornerShape(
+                16.dp
+            ),
+
+        color =
+            color.copy(
+                alpha =
+                    0.09f
+            )
+    ) {
+
+        Row(
+
+            modifier =
+                Modifier.padding(
+                    15.dp
+                ),
+
+            verticalAlignment =
+                Alignment.Top
+        ) {
+
+            Box(
+
+                modifier =
+                    Modifier
+                        .padding(
+                            top =
+                                4.dp
+                        )
+                        .size(
+                            9.dp
+                        )
+                        .background(
+
+                            color =
+                                color,
+
+                            shape =
+                                CircleShape
+                        )
+            )
+
+
+            Spacer(
+
+                modifier =
+                    Modifier.width(
+                        10.dp
+                    )
+            )
+
+
+            Column {
+
+                Text(
+
+                    text =
+                        titulo,
+
+                    color =
+                        NegroPrincipal,
+
+                    fontSize =
+                        15.sp,
+
+                    fontWeight =
+                        FontWeight.Bold
+                )
+
+
+                Text(
+
+                    text =
+                        descripcion,
+
+                    modifier =
+                        Modifier.padding(
+                            top =
+                                3.dp
+                        ),
+
+                    color =
+                        GrisTexto,
+
+                    fontSize =
+                        11.sp,
+
+                    lineHeight =
+                        15.sp
+                )
+            }
         }
     }
 }
@@ -2788,14 +3939,14 @@ private fun EstadoMesaChip(
 
     Surface(
 
+        shape =
+            RoundedCornerShape(
+                50.dp
+            ),
+
         color =
             colorMesa(
                 estado
-            ),
-
-        shape =
-            RoundedCornerShape(
-                50
             )
     ) {
 
@@ -2810,20 +3961,20 @@ private fun EstadoMesaChip(
                 Modifier.padding(
 
                     horizontal =
-                        10.dp,
+                        11.dp,
 
                     vertical =
-                        5.dp
+                        6.dp
                 ),
 
             color =
                 Color.White,
 
             fontSize =
-                10.sp,
+                9.sp,
 
             fontWeight =
-                FontWeight.SemiBold
+                FontWeight.Bold
         )
     }
 }
@@ -2836,71 +3987,102 @@ private fun EstadoVacio(
     onReintentar: () -> Unit
 ) {
 
-    Column(
+    Card(
 
         modifier =
-            Modifier
-                .fillMaxSize()
-                .padding(
-                    24.dp
-                ),
+            Modifier.fillMaxWidth(),
 
-        horizontalAlignment =
-            Alignment.CenterHorizontally,
+        shape =
+            RoundedCornerShape(
+                20.dp
+            ),
 
-        verticalArrangement =
-            Arrangement.Center
+        colors =
+            CardDefaults.cardColors(
+
+                containerColor =
+                    Color.White
+            )
     ) {
 
-        Text(
-
-            text =
-                titulo,
-
-            color =
-                TextoPrincipal,
-
-            fontWeight =
-                FontWeight.Bold
-        )
-
-
-        Text(
-
-            text =
-                descripcion,
+        Column(
 
             modifier =
-                Modifier.padding(
-                    top =
-                        6.dp
-                ),
+                Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        22.dp
+                    ),
 
-            color =
-                TextoSecundario,
-
-            fontSize =
-                13.sp
-        )
-
-
-        Spacer(
-            modifier =
-                Modifier.height(
-                    16.dp
-                )
-        )
-
-
-        Button(
-            onClick =
-                onReintentar
+            horizontalAlignment =
+                Alignment.CenterHorizontally
         ) {
 
             Text(
+
                 text =
-                    "Reintentar"
+                    titulo,
+
+                color =
+                    NegroPrincipal,
+
+                fontWeight =
+                    FontWeight.Bold,
+
+                textAlign =
+                    TextAlign.Center
             )
+
+
+            Text(
+
+                text =
+                    descripcion,
+
+                modifier =
+                    Modifier.padding(
+                        top =
+                            6.dp
+                    ),
+
+                color =
+                    GrisTexto,
+
+                fontSize =
+                    12.sp,
+
+                textAlign =
+                    TextAlign.Center
+            )
+
+
+            Spacer(
+
+                modifier =
+                    Modifier.height(
+                        14.dp
+                    )
+            )
+
+
+            Button(
+
+                onClick =
+                    onReintentar,
+
+                colors =
+                    ButtonDefaults.buttonColors(
+
+                        containerColor =
+                            NegroPrincipal
+                    )
+            ) {
+
+                Text(
+                    text =
+                        "Reintentar"
+                )
+            }
         }
     }
 }
@@ -2915,42 +4097,28 @@ private fun colorMesa(
     ) {
 
         "AVAILABLE" ->
-
-            Color(
-                0xFF10B981
-            )
+            VerdeSmartTable
 
 
         "OCCUPIED" ->
-
-            Color(
-                0xFFF43F5E
-            )
+            RojoMesa
 
 
         "DIRTY" ->
-
-            Color(
-                0xFFF59E0B
-            )
+            AmarilloMesa
 
 
         "CLEANING" ->
-
-            Color(
-                0xFFF97316
-            )
+            NaranjaMesa
 
 
         "BLOCKED" ->
-
             Color(
                 0xFF64748B
             )
 
 
         else ->
-
             Color(
                 0xFF64748B
             )

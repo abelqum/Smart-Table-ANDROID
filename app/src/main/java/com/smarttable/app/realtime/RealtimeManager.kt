@@ -36,8 +36,7 @@ object RealtimeManager {
      * http://127.0.0.1:4000/api
      */
     private const val SOCKET_URL =
-        "http://127.0.0.1:4000"
-
+        "https://smart-table-backend-production.up.railway.app"
 
     private var socket: Socket? =
         null
